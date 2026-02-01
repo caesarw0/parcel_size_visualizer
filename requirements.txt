@@ -1,0 +1,6 @@
+streamlit==1.39.0
+geopandas==1.1.2
+pandas==2.2.2
+streamlit-folium==0.26.1
+folium==0.20.0
+cryptography==45.0.0
