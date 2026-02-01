@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import io
 from cryptography.fernet import Fernet
+import branca.colormap as cm
 
 # --- 1. AUTHENTICATION LOGIC ---
 def check_password():
@@ -92,6 +93,27 @@ def main_app():
         zoom_start=st.session_state.map_zoom, 
         tiles="OpenStreetMap"
     )
+
+    colormap = cm.linear.RdYlGn_09.scale(vmin, vmax)
+    colormap.caption = "Variance (Acres)"
+
+    # 2. Add the Legend to the Map object
+    colormap.add_to(m)
+
+    # 3. Update the GeoJson style function to use the colormap
+    folium.GeoJson(
+        gdf,
+        style_function=lambda feature: {
+            "fillColor": colormap(feature["properties"]["variance_acres"]),
+            "color": "black",
+            "weight": 1,
+            "fillOpacity": 0.6,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=["address", "variance_acres", "assessor_acres_clean", "ll_gisacre"],
+            aliases=["Address:", "Extra Acres:", "Deeded Acres:", "Calculated Acres:"]
+        )
+    ).add_to(m)
 
     folium.GeoJson(
         gdf,
