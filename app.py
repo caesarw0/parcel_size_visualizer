@@ -124,8 +124,16 @@ def main_app():
             "fillOpacity": 0.4,
         },
         tooltip=folium.GeoJsonTooltip(
-            fields=["address", "variance_acres", "assessor_acres_clean", "ll_gisacre"],
-            aliases=["Address:", "Extra Acres:", "Deeded Acres:", "Calculated Acres:"]
+            fields=[
+                "parcelnumb", "address", "county", "state2", "szip", 
+                "variance_acres", "variance_pct", "assessor_acres_clean", "ll_gisacre", 
+                "usedesc", "zoning", "saleprice"
+            ],
+            aliases=[
+                "Parcel Number:", "Address:", "County:", "State:", "Zip:", 
+                "Variance Acres:", "Variance Percent:", "Deeded Acres:", "Calculated Acres:",
+                "Used Description:", "Zoning:", "Sale Price:"
+            ]
         )
     ).add_to(m)
 
@@ -134,8 +142,9 @@ def main_app():
     # --- Layout: Table ---
     st.subheader("Property Data List")
     st.write("💡 *Select a row below to center the map on that parcel.*")
-    display_cols = ["address", "variance_acres", "variance_pct", "assessor_acres_clean", "ll_gisacre", "usedesc", "zoning", "saleprice"]
-
+    display_cols = ["parcelnumb", "address", "county", "state2", "szip", 
+    "variance_acres", "variance_pct", "assessor_acres_clean", "ll_gisacre", 
+    "usedesc", "zoning", "saleprice"]
     # Capture the selection event
     selection_event = st.dataframe(
         gdf[display_cols],
