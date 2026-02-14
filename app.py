@@ -1,5 +1,6 @@
 import streamlit as st
 import geopandas as gpd
+import numpy as np
 import folium
 from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
@@ -7,6 +8,18 @@ import matplotlib.colors as colors
 import io
 from cryptography.fernet import Fernet
 import branca.colormap as cm
+
+
+GOOGLE_TILES = {
+    "Satellite": {
+        "url": "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}",
+        "attr": "Google Hybrid"
+    },
+    "Terrain Map": {
+        "url": "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}",
+        "attr": "Terrain"
+    },
+}
 
 # --- 1. AUTHENTICATION LOGIC ---
 def check_password():
@@ -76,16 +89,6 @@ def main_app():
         st.session_state.map_center = [avg_lat, avg_lon]
         st.session_state.map_zoom = 13
 
-    # --- Color Logic ---
-    vmin, vmax = gdf["variance_acres"].min(), gdf["variance_acres"].max()
-    colormap = plt.get_cmap("RdYlGn") 
-    norm = colors.Normalize(vmin=vmin, vmax=vmax)
-
-    def get_color(feature):
-        val = feature["properties"]["variance_acres"]
-        rgba = colormap(norm(val))
-        return colors.to_hex(rgba)
-
     # --- Layout: Map ---
     st.subheader("Interactive Map")
     m = folium.Map(
@@ -94,11 +97,31 @@ def main_app():
         tiles="OpenStreetMap"
     )
 
-    colormap = cm.linear.RdYlGn_09.scale(vmin, vmax)
-    colormap.caption = "Variance (Acres)"
+    # 1. Add the Google Tiles to the Map object
+    folium.TileLayer(
+        tiles=GOOGLE_TILES["Satellite"]["url"],
+        attr=GOOGLE_TILES["Satellite"]["attr"],
+        overlay=True,
+        name="Satellite"
+    ).add_to(m)
 
-    # 2. Add the Legend to the Map object
-    colormap.add_to(m)
+    # Log normalization
+    vmin, vmax = gdf["variance_acres"].min(), gdf["variance_acres"].max()
+    norm = colors.LogNorm(vmin=vmin, vmax=vmax)
+
+    colormap = plt.get_cmap("RdYlGn")
+
+    def get_color(feature):
+        val = feature["properties"]["variance_acres"]
+        if val <= 0 or np.isnan(val):
+            return "#cccccc"  # neutral for invalid
+        rgba = colormap(norm(val))
+        return colors.to_hex(rgba)
+
+    # Folium legend (log scale approximation)
+    legend = cm.linear.RdYlGn_09.scale(vmin, vmax)
+    legend.caption = "Variance (Acres) - Log Scaled"
+    legend.add_to(m)
 
     # 3. Update the GeoJson style function to use the colormap
     folium.GeoJson(
@@ -107,7 +130,7 @@ def main_app():
             "fillColor": colormap(feature["properties"]["variance_acres"]),
             "color": "black",
             "weight": 1,
-            "fillOpacity": 0.6,
+            "fillOpacity": 0.3,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=["address", "variance_acres", "assessor_acres_clean", "ll_gisacre"],
