@@ -1,6 +1,7 @@
 import streamlit as st
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import folium
 from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
@@ -80,6 +81,32 @@ def main_app():
     st.title("🗺️ Parcel Size Variance Explorer")
 
     gdf = load_data()
+    selected_parcel_id = None
+
+    selection_event = st.session_state.get("data_table")
+
+    if selection_event and len(selection_event.selection.rows) > 0:
+        idx = selection_event.selection.rows[0]
+        selected_parcel = gdf.iloc[idx]
+        selected_parcel_id = selected_parcel["parcelnumb"]
+
+        target_lat = selected_parcel.geometry.centroid.y
+        target_lon = selected_parcel.geometry.centroid.x
+
+        st.session_state.map_center = [target_lat, target_lon]
+        st.session_state.map_zoom = 15
+
+
+    gdf["variance_pct_display"] = np.where(
+        (gdf["variance_acres"].notnull()) &
+        (gdf["variance_acres"] != 0) &
+        (gdf["assessor_acres_clean"].notnull()) &
+        (gdf["assessor_acres_clean"] != 0),
+        gdf["variance_pct"].round(2).astype(str) + "%",
+        ""
+    )
+
+    gdf["full_mail_address"] = gdf["mailadd"] + ", " + gdf["mail_city"] + ", " + gdf["mail_state2"] + ", " + gdf["mail_zip"]
 
     # --- Initialize Session State for Map ---
     if 'map_center' not in st.session_state:
@@ -123,38 +150,35 @@ def main_app():
     legend.caption = "Variance (Acres) - Log Scaled"
     legend.add_to(m)
 
+    def style_function(feature):
+        is_selected = (
+            selected_parcel_id is not None and
+            feature["properties"]["parcelnumb"] == selected_parcel_id
+        )
+
+        return {
+            "fillColor": get_color(feature),
+            "color": "red" if is_selected else "black",
+            "weight": 4 if is_selected else 1,
+            "fillOpacity": 0.6 if is_selected else 0.4,
+        }
+
+
     # 3. Update the GeoJson style function to use the colormap
     folium.GeoJson(
         gdf,
-        style_function=lambda feature: {
-            "fillColor": colormap(feature["properties"]["variance_acres"]),
-            "color": "black",
-            "weight": 1,
-            "fillOpacity": 0.3,
-        },
-        tooltip=folium.GeoJsonTooltip(
-            fields=["address", "variance_acres", "assessor_acres_clean", "ll_gisacre"],
-            aliases=["Address:", "Extra Acres:", "Deeded Acres:", "Calculated Acres:"]
-        )
-    ).add_to(m)
-
-    folium.GeoJson(
-        gdf,
-        style_function=lambda feature: {
-            "fillColor": get_color(feature),
-            "color": "black",
-            "weight": 1,
-            "fillOpacity": 0.4,
-        },
+        style_function=style_function,
         tooltip=folium.GeoJsonTooltip(
             fields=[
-                "parcelnumb", "address", "county", "state2", "szip", 
-                "variance_acres", "variance_pct", "assessor_acres_clean", "ll_gisacre", 
+                "parcelnumb", "alt_parcelnumb1", "full_mail_address", "address", "county", "state2", "szip",
+                "variance_acres", "variance_pct_display",
+                "assessor_acres_clean", "ll_gisacre",
                 "usedesc", "zoning", "saleprice"
             ],
             aliases=[
-                "Parcel Number:", "Address:", "County:", "State:", "Zip:", 
-                "Variance Acres:", "Variance Percent:", "Deeded Acres:", "Calculated Acres:",
+                "Parcel Number:", "Tax Map #:", "Full Mailing Address:", "Address:", "County:", "State:", "Zip:",
+                "Variance Acres:", "Variance Percent:",
+                "Deeded Acres:", "Calculated Acres:",
                 "Used Description:", "Zoning:", "Sale Price:"
             ]
         )
@@ -165,8 +189,9 @@ def main_app():
     # --- Layout: Table ---
     st.subheader("Property Data List")
     st.write("💡 *Select a row below to center the map on that parcel.*")
-    display_cols = ["parcelnumb", "address", "county", "state2", "szip", 
-    "variance_acres", "variance_pct", "assessor_acres_clean", "ll_gisacre", 
+    display_cols = ["parcelnumb", "alt_parcelnumb1",
+    "full_mail_address", "address", "county", "state2", "szip", 
+    "variance_acres", "variance_pct_display", "assessor_acres_clean", "ll_gisacre", 
     "usedesc", "zoning", "saleprice"]
     # Capture the selection event
     selection_event = st.dataframe(
@@ -176,20 +201,6 @@ def main_app():
         selection_mode="single-row",
         key="data_table"
     )
-
-    # --- 4. SELECTION LOGIC (Prevents Infinite Loop) ---
-    if len(selection_event.selection.rows) > 0:
-        idx = selection_event.selection.rows[0]
-        selected_parcel = gdf.iloc[idx]
-        
-        target_lat = selected_parcel.geometry.centroid.y
-        target_lon = selected_parcel.geometry.centroid.x
-        
-        # Only rerun if the coordinates have actually changed
-        if st.session_state.map_center != [target_lat, target_lon]:
-            st.session_state.map_center = [target_lat, target_lon]
-            st.session_state.map_zoom = 18
-            st.rerun()
 
     # --- 5. LOGOUT & EXPORT ---
     st.divider()
