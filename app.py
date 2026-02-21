@@ -171,12 +171,14 @@ def main_app():
         tooltip=folium.GeoJsonTooltip(
             fields=[
                 "parcelnumb", "alt_parcelnumb1", "full_mail_address", "address", "county", "state2", "szip",
+                "owner",
                 "variance_acres", "variance_pct_display",
                 "assessor_acres_clean", "ll_gisacre",
                 "usedesc", "zoning", "saleprice"
             ],
             aliases=[
                 "Parcel Number:", "Tax Map #:", "Full Mailing Address:", "Address:", "County:", "State:", "Zip:",
+                "Owner:",
                 "Variance Acres:", "Variance Percent:",
                 "Deeded Acres:", "Calculated Acres:",
                 "Used Description:", "Zoning:", "Sale Price:"
@@ -191,6 +193,7 @@ def main_app():
     st.write("💡 *Select a row below to center the map on that parcel.*")
     display_cols = ["parcelnumb", "alt_parcelnumb1",
     "full_mail_address", "address", "county", "state2", "szip", 
+    "owner",
     "variance_acres", "variance_pct_display", "assessor_acres_clean", "ll_gisacre", 
     "usedesc", "zoning", "saleprice"]
     # Capture the selection event
