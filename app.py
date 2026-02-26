@@ -190,24 +190,29 @@ def main_app():
 
     # --- Layout: Table ---
     st.subheader("Property Data List")
-    st.write("💡 *Select a row below to center the map on that parcel.*")
+    st.write("💡 *Select rows with the checkboxes to export only those records. Click a row to center the map on that parcel.*")
     display_cols = ["parcelnumb", "alt_parcelnumb1",
     "full_mail_address", "address", "county", "state2", "szip", 
     "owner",
     "variance_acres", "variance_pct_display", "assessor_acres_clean", "ll_gisacre", 
     "usedesc", "zoning", "saleprice"]
-    # Capture the selection event
+    # Capture the selection event (multi-row for checkboxes)
     selection_event = st.dataframe(
         gdf[display_cols],
         use_container_width=True,
         on_select="rerun",
-        selection_mode="single-row",
+        selection_mode="multi-row",
         key="data_table"
     )
 
+    # Selected row indices (for export and map)
+    selected_indices = []
+    if selection_event and selection_event.selection.rows:
+        selected_indices = list(selection_event.selection.rows)
+
     # --- 5. LOGOUT & EXPORT ---
     st.divider()
-    col1, col2 = st.columns([1, 5])
+    col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
         if st.button("Logout"):
             st.session_state["password_correct"] = False
@@ -215,6 +220,21 @@ def main_app():
     with col2:
         csv = gdf.drop(columns='geometry').to_csv(index=False).encode('utf-8')
         st.download_button("📥 Download Lead List (CSV)", data=csv, file_name="leads.csv", mime="text/csv")
+    with col3:
+        selected_csv = b""
+        if selected_indices:
+            selected_gdf = gdf.iloc[selected_indices].drop(columns="geometry")
+            selected_csv = selected_gdf.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 Export selected rows (CSV)",
+            data=selected_csv,
+            file_name="leads_selected.csv",
+            mime="text/csv",
+            disabled=len(selected_indices) == 0,
+            help="Select rows with the checkboxes above, then click to download only those records."
+        )
+    if not selected_indices:
+        st.caption("Select one or more rows with the checkboxes to enable « Export selected rows (CSV) ».")
 
 # --- ENTRY POINT ---
 st.set_page_config(layout="wide", page_title="Land Variance Explorer")
