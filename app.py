@@ -108,6 +108,10 @@ def main_app():
 
     gdf["full_mail_address"] = gdf["mailadd"] + ", " + gdf["mail_city"] + ", " + gdf["mail_state2"] + ", " + gdf["mail_zip"]
 
+    # --- Vacancy filtering ---
+    gdf_vacant = gdf[gdf["vacancy"] == "Y"]
+    gdf_not_vacant = gdf[(gdf["vacancy"] != "Y") | (gdf["vacancy"].isna())]
+
     # --- Initialize Session State for Map ---
     if 'map_center' not in st.session_state:
         # Calculate initial center
@@ -119,17 +123,25 @@ def main_app():
     # --- Layout: Map ---
     st.subheader("Interactive Map")
     m = folium.Map(
-        location=st.session_state.map_center, 
-        zoom_start=st.session_state.map_zoom, 
-        tiles="OpenStreetMap"
+        location=st.session_state.map_center,
+        zoom_start=st.session_state.map_zoom,
+        tiles=None
     )
 
-    # 1. Add the Google Tiles to the Map object
+    # --- Base Layers (radio buttons) ---
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
+        overlay=False,
+        control=True
+    ).add_to(m)
+
     folium.TileLayer(
         tiles=GOOGLE_TILES["Satellite"]["url"],
         attr=GOOGLE_TILES["Satellite"]["attr"],
-        overlay=True,
-        name="Satellite"
+        name="Satellite",
+        overlay=False,
+        control=True
     ).add_to(m)
 
     # Log normalization
@@ -163,28 +175,44 @@ def main_app():
             "fillOpacity": 0.6 if is_selected else 0.4,
         }
 
-
+    fields = [
+        "parcelnumb", "alt_parcelnumb1", "full_mail_address", "address", "county", "state2", "szip",
+        "owner",
+        "variance_acres", "variance_pct_display",
+        "assessor_acres_clean", "ll_gisacre",
+        "usedesc", "zoning", "saleprice",
+        "lbcs_function_desc", "lbcs_structure_desc"
+    ]
+    aliases = [
+        "Parcel Number:", "Tax Map #:", "Full Mailing Address:", "Address:", "County:", "State:", "Zip:",
+        "Owner:",
+        "Variance Acres:", "Variance Percent:",
+        "Deeded Acres:", "Calculated Acres:",
+        "Used Description:", "Zoning:", "Sale Price:",
+        "LBCS Function:", "LBCS Structure:"
+    ]
     # 3. Update the GeoJson style function to use the colormap
     folium.GeoJson(
-        gdf,
+        gdf_vacant,
+        name="Vacant Parcels",
         style_function=style_function,
         tooltip=folium.GeoJsonTooltip(
-            fields=[
-                "parcelnumb", "alt_parcelnumb1", "full_mail_address", "address", "county", "state2", "szip",
-                "owner",
-                "variance_acres", "variance_pct_display",
-                "assessor_acres_clean", "ll_gisacre",
-                "usedesc", "zoning", "saleprice"
-            ],
-            aliases=[
-                "Parcel Number:", "Tax Map #:", "Full Mailing Address:", "Address:", "County:", "State:", "Zip:",
-                "Owner:",
-                "Variance Acres:", "Variance Percent:",
-                "Deeded Acres:", "Calculated Acres:",
-                "Used Description:", "Zoning:", "Sale Price:"
-            ]
+            fields=fields,
+            aliases=aliases
         )
     ).add_to(m)
+
+    folium.GeoJson(
+        gdf_not_vacant,
+        name="Not Vacant Parcels",
+        style_function=style_function,
+        tooltip=folium.GeoJsonTooltip(
+            fields=fields,
+            aliases=aliases
+        )
+    ).add_to(m)
+
+    folium.LayerControl(collapsed=False).add_to(m)
 
     st_folium(m, width="100%", height=500, key="main_map")
 
@@ -195,7 +223,7 @@ def main_app():
     "full_mail_address", "address", "county", "state2", "szip", 
     "owner",
     "variance_acres", "variance_pct_display", "assessor_acres_clean", "ll_gisacre", 
-    "usedesc", "zoning", "saleprice"]
+    "usedesc", "zoning", "saleprice", "lbcs_function_desc", "lbcs_structure_desc"]
     # Capture the selection event (multi-row for checkboxes)
     selection_event = st.dataframe(
         gdf[display_cols],
