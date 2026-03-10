@@ -310,6 +310,7 @@ def main_app():
     selection_event = st.dataframe(
         gdf_display[display_cols],
         use_container_width=True,
+        height=400,
         on_select="rerun",
         selection_mode="multi-row",
         key="data_table"
