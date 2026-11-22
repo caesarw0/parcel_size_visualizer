@@ -1,0 +1,40 @@
+{
+  "excluded": [
+    {
+      "parcelnumb": "5302100",
+      "owner": "UNITED STATES OF AMERICA",
+      "address": "None",
+      "excluded_at": "2026-03-09T12:01:40"
+    },
+    {
+      "parcelnumb": "14203700",
+      "owner": "ZIMMERMAN KATHY MARIE & EDWIN L",
+      "address": "None",
+      "excluded_at": "2026-03-09T12:01:45"
+    },
+    {
+      "parcelnumb": "24500800",
+      "owner": "WALMARK FARMS INC",
+      "address": "None",
+      "excluded_at": "2026-03-09T12:01:45"
+    },
+    {
+      "parcelnumb": "18702300",
+      "owner": "TUCKER IRREVOCABLE LIVING TRUST",
+      "address": "1931 TUCKER TER",
+      "excluded_at": "2026-03-09T12:01:45"
+    },
+    {
+      "parcelnumb": "18401900",
+      "owner": "DRYE LINDA W & WEBBER CHESTER L",
+      "address": "1559 EPHESUS RD",
+      "excluded_at": "2026-03-09T12:01:58"
+    },
+    {
+      "parcelnumb": "10305500",
+      "owner": "COOK EDWIN M",
+      "address": "5005 SANDY FORD RD",
+      "excluded_at": "2026-03-09T12:01:58"
+    }
+  ]
+}
